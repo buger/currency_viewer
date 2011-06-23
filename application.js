@@ -371,7 +371,7 @@
             a = a.childNodes[sort_column_index].innerHTML;
             b = b.childNodes[sort_column_index].innerHTML;
 
-            return ((a < b) ? -1 : (a > b) ? 1 : 0) * (sort_order == 'desc' ? 1 : -1);
+            return ((a < b) ? -1 : (a > b) ? 1 : 0) * (sort_order == 'desc' ? -1 : 1);
         });
         
         this._table.find('tbody').empty().append(rows);
