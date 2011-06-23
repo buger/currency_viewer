@@ -1,4 +1,15 @@
 (function($, window, undefined){    
+    $.fn.disableSelection = function() {
+        $(this).attr('unselectable', 'on')
+               .css('-moz-user-select', 'none')
+               .each(function() { 
+                   this.onselectstart = function() { return false; };
+                });
+    };
+
+    function formatFloat(value) {
+        return Math.round(value*1000)/1000;
+    }
 
     function loadXMLString(txt) {
         if (window.DOMParser) {
@@ -30,7 +41,7 @@
     }
 
     CurrencyManager.currencies = [
-        { id: "USD", name: "Американский доллар", alt_name: "Американского доллара" },          
+        { id: "USD", name: "Доллар США", alt_name: "Доллара США" },          
         { id: "EUR", name: "Евро", alt_name: "Евро" }, 
         { id: "BGN", name: "Болгарский лев", alt_name: "Болгарского льва" },
         { id: "RUB", name: 'Российский рубль', alt_name: "Российского рубля" }, 
@@ -142,6 +153,8 @@
 
         this._canvas.width = this._canvas_container.width();
         this._canvas.height = this._canvas_container.height();        
+        
+        this._point_width = this._canvas.width/this.points;
 
         this._canvas_container.append(this._canvas);
     }
@@ -153,7 +166,7 @@
             panel += ["<li>",
                          "<label>",
                              "<input type='checkbox' name='"+CurrencyManager.currencies[c].id+"'",
-                             (c < 3 ? "checked" : ''), // Setting default checked values, only for Prototype
+                             (c < 3 ? "checked='checked'" : ''), // Setting default checked values, only for Prototype
                              "/>",
                              CurrencyManager.currencies[c].name || CurrencyManager.currencies[c].id,
                          "</label>",
@@ -171,22 +184,206 @@
         $('#header select').html(options)
             .val('RUB') // Setting default values
             .bind('change', $.proxy(this.draw, this));
-
+        
+        // Show all currencies in left panel
         $('#left a.show_all').bind('click', function(){
             $('#left ol').css({ width: '100%', overflow:'visible' });
 
             $(this).remove();
         });
+                
+        this.initControls();
+        this.updateData();
+    }
+
+    CurrencyUI.prototype.initControls = function() {
+        var self = this;
+
+        this._table = $('#right .cur_table');
+
+        this._table.find('th').bind('click', function(){
+            if (self._table.data('sort-column') == this.className) {
+                self._table.data('sort-dir', self._table.data('sort-dir') == 'desc' ? 'asc' : 'desc');
+            } else {
+                self._table.data('sort-column', this.className);
+                self._table.data('sort-dir', 'desc');                
+            }
+
+            self.updateData();
+        });
+
+        this._overlay = $('#right .controls .overlay');
+        this._range_start = $('#right .controls .start');
+        this._range_end = $('#right .controls .end');
+
+        this._overlay
+            .bind('mousedown', function(){ window._drag_object = this })
+            .disableSelection();
+
+        this._range_start
+            .bind('mousedown', function(){ window._drag_object = this })
+            .disableSelection();
+
+        this._range_end
+            .bind('mousedown', function(){ window._drag_object = this })
+            .disableSelection();
+
+
+        $(window.document)        
+            .bind('mouseup', function(){
+                delete window._drag_object;
+                delete window._drag_x_start;
+                delete window._drag_y_start;
+            })
+            .bind('mousedown', function(evt){
+                window._drag_x_start = evt.pageX;
+                window._drag_y_start = evt.pageY;
+            })
+            .bind('mousemove', function(evt){
+                if (window._drag_object) {
+                    var delta = window._drag_x_start - evt.pageX;
+                    window._drag_x_start = evt.pageX;
+                    
+                    var position = parseInt($(window._drag_object).css('right')) + delta;                    
+                    
+                    if (!self.checkBoundaries(delta))
+                        return false;
+                    
+                    $(window._drag_object).css({
+                        right: position + 'px'
+                    });
+                    
+                    if (!$(window._drag_object).hasClass('overlay')) {
+                        // Resizing overlay according to start and end
+                        var start = parseInt(self._range_start.css('right'));
+                        var end = parseInt(self._range_end.css('right'));
+
+                        self._overlay.css({ 
+                            width: Math.abs(start-end) + 'px', 
+                            right: end + 'px'
+                        });
+                    } else {
+                        // Moving controls together with overlay
+                        self._range_end.css({ 'right': self._overlay.css('right') });
+                        self._range_start.css({ 'right': parseInt(self._overlay.css('right'))+self._overlay.width() });
+                    }
+
+                    self.updateData();
+                }
+            });
+    }
+
+    CurrencyUI.prototype.checkBoundaries = function(delta) {
+        var start = parseInt(this._range_start.css('right'));
+        var end = parseInt(this._range_end.css('right'));
+
+        if ($(window._drag_object).hasClass('start')) {
+            var move = Math.abs(start-end) + delta;           
+        } else if ($(window._drag_object).hasClass('end')) {
+            var move = Math.abs(start-end) - delta;
+        }
+
+        
+        // Checking intersection with boudaries
+        if ($(window._drag_object).hasClass('start') || $(window._drag_object).hasClass('overlay')) {         
+            if ((start+delta) >= this._canvas.width + 10) {
+                return false;
+            }
+        }
+        
+        if ($(window._drag_object).hasClass('end') || $(window._drag_object).hasClass('overlay')) {
+            if ((end+delta) < 8) {
+                return false;
+            }
+        }
+        
+        // End must not intersect with Start
+        if (move && move < this._point_width) {
+            return false;
+        }
+
+        return true;
+    }
+
+    CurrencyUI.prototype.calcPoints = function(value) {
+        return parseInt((parseFloat(value)/this._point_width));
+    }
+
+    CurrencyUI.prototype.getDate = function(value) {
+        var months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']; 
+
+        var date = new Date();
+        date.setDate(date.getDate() - value);
+
+        return date.getDate() + " " + months[date.getMonth()];
+    }
+
+    CurrencyUI.prototype.updateData = function() {        
+        // Calculating day based on controls position
+        this._points_start = this.calcPoints(this._range_start.css('right'));
+        this._range_start.find('.date').html(this.getDate(this._points_start));
+        
+        this._points_end = this.calcPoints(this._range_end.css('right'));
+        this._range_end.find('.date').html(this.getDate(this._points_end));
+
+        // Updating table
+        var base_currency = $('#header .base_currency').val();
+        var currency_data = this.currency_manager.getData(base_currency);
+
+        var currencies = $('#left ol li input').filter(':checked');
+        for (var i=0; i<currencies.length; i++) {
+            currencies[i] = currencies[i].name;
+        }
+
+        this._table.find('th.start').html(this.getDate(this._points_start));
+        this._table.find('th.end').html(this.getDate(this._points_end));
+        
+        var rows = "", start_value, end_value, diff;
+
+        for (var c=0; c<currencies.length; c++) {
+            start_value = 1/currency_data[this.points-this._points_start].items[currencies[c]];
+            end_value = 1/currency_data[this.points-this._points_end].items[currencies[c]];
+            diff = end_value - start_value;
+
+            rows += [
+            "<tr>",
+                "<td>" + (this.currency_manager.get(currencies[c]).name || this.currency_manager.get(currencies[c]).id) + "</td>",
+                "<td>" + formatFloat(start_value) + "</td>",
+                "<td>" + formatFloat(end_value) + "</td>",
+                "<td class='"+(diff < 0 ? 'red' : 'green')+"'>" + formatFloat(diff) + "</td>",
+            "</tr>"].join('');
+        }
+
+        this._table.find('tbody').html(rows);
+
+        // Styling sort column
+        this._table.find('th span').remove();
+
+        var sort_column = this._table.find('.'+this._table.data('sort-column'));
+        sort_column.append("<span>"+(this._table.data('sort-dir') == 'desc' ? '▼' : '▲')+"</span>");
+
+        var sort_order = this._table.data('sort-dir');
+
+        var rows = this._table.find('tbody tr').get();
+        var sort_column_index = sort_column.index();
+        
+        rows.sort(function(a,b) {
+            a = a.childNodes[sort_column_index].innerHTML;
+            b = b.childNodes[sort_column_index].innerHTML;
+
+            return ((a < b) ? -1 : (a > b) ? 1 : 0) * (sort_order == 'desc' ? 1 : -1);
+        });
+        
+        this._table.find('tbody').empty().append(rows);
     }
 
     CurrencyUI.prototype.draw = function() {
-        var currencies = $('#left ol li input:checked');
+        var currencies = $('#left ol li input').filter(':checked');
         for (var i=0; i<currencies.length; i++) {
             currencies[i] = currencies[i].name;
         }
 
         var base_currency = $('#header .base_currency').val();
-
         var currency_data = this.currency_manager.getData(base_currency);        
                 
         currencies.sort(function(c1, c2){
@@ -251,7 +448,7 @@
             this._ctx.beginPath();
             
             for (var p=0; p<=this.points; p++) {
-                x = (this._canvas.width/this.points)*p;
+                x = (this._point_width)*p;
 
                 y = 1/currency_data[p].items[currencies[c]];
 
@@ -279,6 +476,8 @@
         }
         
         this._ctx.restore();
+
+        this.updateData();
     }
 
     CurrencyUI.prototype.drawLegend = function(currency, x, y, range, max, min) {

@@ -29,14 +29,25 @@
                 <div id="right">
                     <div class="container">
                         <div class="cur_graph"></div>
+                        <div class="controls">
+                            <a class="start unselectable">
+                                <div class="handle"></div>
+                                <div class="date">14 июня</div>
+                            </a>
+                            <a class="end unselectable">
+                                <div class="handle"></div>
+                                <div class="date">16 июня</div>                            
+                            </a>
+                            <div class="overlay unselectable"></div>
+                        </div>
 
-                        <table class="cur_table">
+                        <table class="cur_table" data-sort-dir='desc' data-sort-column='name'>
                             <thead>
                                 <tr>
-                                    <th>Валюта</th>
-                                    <th>14 июня</th>
-                                    <th>15 июня</th>
-                                    <th>Изм.</th>
+                                    <th width="46%" class='name'>Валюта</th>
+                                    <th width="20%" class='start'>14 июня</th>
+                                    <th width="20%" class='end'>15 июня</th>
+                                    <th width="14%" class='change'>Изм.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -44,7 +55,6 @@
                         </table>
                     </div>
                 </div>
-                <div class='clear'></div>
             </div> <!-- .relative -->
         </div> <!-- #wrapper -->
 
