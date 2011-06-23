@@ -1,0 +1,85 @@
+.clear { clear: both; height: 1px; }
+
+.relative { position: relative; }
+
+.container { padding: 10px }
+
+
+#wrapper {
+    width: 960px;
+    margin: 0 auto;
+    margin-top: 20px;
+    margin-bottom: 100px;
+}
+
+#header h1 {    
+    display: inline;
+}
+
+#left, #right { float: left; }
+
+#left { width: 30%; }
+#right { width: 70%; }
+
+
+.cur_graph {
+    width: 100%;
+    height: 250px;
+    border: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.cur_graph .legend {
+    position: absolute;
+    right: -30px;
+    padding: 3px;
+    background: white;    
+    border: 1px solid #ccc;
+    cursor: default;
+}
+
+#header h1 {
+    font-size: 300%;
+    color: #333;
+}
+
+#header select {
+    padding: 3px;
+    font-size: 240%;
+    width: 425px;
+    margin-left: 20px;
+}
+
+#left ol li {
+    margin-bottom: 5px;
+}
+
+#left ol li label {
+    display: block;    
+    font-size: 161.6%;    
+    color: #333;  
+}
+
+#left ol li label input {
+    width: 13px;
+    height: 13px;    
+    vertical-align: center;
+    position: relative;
+    top: -3px;
+    *overflow: hidden;
+
+    margin-right: 10px;    
+}
+
+#left .container ol {
+    height: 370px;
+    overflow: hidden;
+}
+
+a.action {
+    text-decoration: none;
+
+    border-bottom: 1px dashed #05C;
+
+    font-size: 120%;
+}
