@@ -1,4 +1,5 @@
 (function($, window, undefined){    
+
     $.fn.disableSelection = function() {
         $(this).attr('unselectable', 'on')
                .css('-moz-user-select', 'none')
@@ -15,7 +16,8 @@
         if (window.DOMParser) {
             parser=new DOMParser();
             xmlDoc=parser.parseFromString(txt,"text/xml");
-        } else {// Internet Explorer      
+        } else {
+            // Internet Explorer      
             xmlDoc=new ActiveXObject("Microsoft.XMLDOM");
             xmlDoc.async="false";
             xmlDoc.loadXML(txt); 
@@ -24,7 +26,11 @@
         return xmlDoc;
     }
 
-
+    /**
+     *
+     *  Class CurrencyManager
+     *
+     **/
     var CurrencyManager = function() {       
         this.currency_data = [];
 
@@ -39,7 +45,8 @@
             CurrencyManager.currencies[i].color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
         }
     }
-
+    
+    // I was too lazy to fill all of the names for prototype
     CurrencyManager.currencies = [
         { id: "USD", name: "Доллар США", alt_name: "Доллара США" },          
         { id: "EUR", name: "Евро", alt_name: "Евро" }, 
@@ -133,7 +140,12 @@
         return data;
     }
 
-    
+
+    /**
+     *
+     *  Class CurrencyUI 
+     *
+     **/
     var CurrencyUI = function(el){
         this.currency_manager = new CurrencyManager();
 
@@ -144,6 +156,7 @@
         
         this.draw();
     }
+
 
     CurrencyUI.prototype.initCanvas = function() {
         this._canvas_container = $('#right .cur_graph');
@@ -159,14 +172,16 @@
         this._canvas_container.append(this._canvas);
     }
 
+
     CurrencyUI.prototype.initUI = function() {
         var panel = "", options = "";
         
+        // Updating left and top panels with currencies
         for (var c=0; c<CurrencyManager.currencies.length; c++) {
             panel += ["<li>",
                          "<label>",
                              "<input type='checkbox' name='"+CurrencyManager.currencies[c].id+"'",
-                             (c < 3 ? "checked='checked'" : ''), // Setting default checked values, only for Prototype
+                             (c < 3 ? "checked='checked'" : ''), // Setting default checked values, only for this Prototype
                              "/>",
                              CurrencyManager.currencies[c].name || CurrencyManager.currencies[c].id,
                          "</label>",
@@ -177,15 +192,19 @@
                             (CurrencyManager.currencies[c].alt_name || CurrencyManager.currencies[c].id).toLowerCase(),
                         "</option>"].join('');                        
         }
-
+                
         $('#left ol').html(panel);
+
+
+        // Redraw Chart when changing values inside top on right panel
         $('#left ol li input').bind('change', $.proxy(this.draw, this));
 
         $('#header select').html(options)
             .val('RUB') // Setting default values
             .bind('change', $.proxy(this.draw, this));
         
-        // Show all currencies in left panel
+        
+        // 'Show all currencies' link in left panel
         $('#left a.show_all').bind('click', function(){
             $('#left ol').css({ width: '100%', overflow:'visible' });
 
@@ -198,7 +217,8 @@
 
     CurrencyUI.prototype.initControls = function() {
         var self = this;
-
+        
+        // Initializing currency table
         this._table = $('#right .cur_table');
 
         this._table.find('th').bind('click', function(){
@@ -212,6 +232,7 @@
             self.updateData();
         });
 
+        // Initializing Chart controls        
         this._overlay = $('#right .controls .overlay');
         this._range_start = $('#right .controls .start');
         this._range_end = $('#right .controls .end');
@@ -228,7 +249,7 @@
             .bind('mousedown', function(){ window._drag_object = this })
             .disableSelection();
 
-
+        // D&D
         $(window.document)        
             .bind('mouseup', function(){
                 delete window._drag_object;
@@ -284,7 +305,7 @@
         }
 
         
-        // Checking intersection with boudaries
+        // Checking intersection with borders
         if ($(window._drag_object).hasClass('start') || $(window._drag_object).hasClass('overlay')) {         
             if ((start+delta) >= this._canvas.width + 10) {
                 return false;
@@ -304,11 +325,14 @@
 
         return true;
     }
-
-    CurrencyUI.prototype.calcPoints = function(value) {
-        return parseInt((parseFloat(value)/this._point_width));
+    
+    // How many data points inside specific width
+    CurrencyUI.prototype.calcPoints = function(width) {
+        return parseInt((parseFloat(width)/this._point_width));
     }
 
+    // Generate date
+    // FIXME: It's generating fake dates. Only for prototype.
     CurrencyUI.prototype.getDate = function(value) {
         var months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']; 
 
@@ -318,6 +342,7 @@
         return date.getDate() + " " + months[date.getMonth()];
     }
 
+    // Update table and controls data
     CurrencyUI.prototype.updateData = function() {        
         // Calculating day based on controls position
         this._points_start = this.calcPoints(this._range_start.css('right'));
@@ -339,7 +364,8 @@
         this._table.find('th.end').html(this.getDate(this._points_end));
         
         var rows = "", start_value, end_value, diff;
-
+        
+        // Generating rows
         for (var c=0; c<currencies.length; c++) {
             start_value = 1/currency_data[this.points-this._points_start].items[currencies[c]];
             end_value = 1/currency_data[this.points-this._points_end].items[currencies[c]];
@@ -356,17 +382,17 @@
 
         this._table.find('tbody').html(rows);
 
+        var sort_column = this._table.find('.'+this._table.data('sort-column'));
+        var sort_order = this._table.data('sort-dir');
+
         // Styling sort column
         this._table.find('th span').remove();
-
-        var sort_column = this._table.find('.'+this._table.data('sort-column'));
         sort_column.append("<span>"+(this._table.data('sort-dir') == 'desc' ? '▼' : '▲')+"</span>");
-
-        var sort_order = this._table.data('sort-dir');
 
         var rows = this._table.find('tbody tr').get();
         var sort_column_index = sort_column.index();
         
+        // Sorting rows
         rows.sort(function(a,b) {
             a = a.childNodes[sort_column_index].innerHTML;
             b = b.childNodes[sort_column_index].innerHTML;
@@ -377,6 +403,7 @@
         this._table.find('tbody').empty().append(rows);
     }
 
+    // Drawing Chart
     CurrencyUI.prototype.draw = function() {
         var currencies = $('#left ol li input').filter(':checked');
         for (var i=0; i<currencies.length; i++) {
@@ -385,13 +412,14 @@
 
         var base_currency = $('#header .base_currency').val();
         var currency_data = this.currency_manager.getData(base_currency);        
-                
+        
         currencies.sort(function(c1, c2){
             return currency_data[0].items[c1] - currency_data[0].items[c2];
         });
 
         var max, min, rate;
         
+        // Detecting min and max to get display range
         for (var c=0; c<currencies.length; c++) {
             for (var p=0; p<this.points; p++) {
                 rate = 1/currency_data[p].items[currencies[c]];
@@ -487,7 +515,7 @@
 
         var legend = $('<a class="legend">'+currency+'</a>');
         legend.css({
-            top: (250-legend_y)+'px'            
+            top: (this._canvas.height-legend_y)+'px'            
         });
 
         this._canvas_container.append(legend);
@@ -497,5 +525,4 @@
         new CurrencyUI();
     });
 
-    window.curr_manager = new CurrencyManager();
 }(jQuery, window))
